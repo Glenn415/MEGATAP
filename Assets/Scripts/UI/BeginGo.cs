@@ -34,7 +34,7 @@ public class BeginGo : MonoBehaviour {
         cs = playerTwo.GetComponent<CastSpell>();
         playerMov = playerOne.GetComponent<PlayerOneMovement>(); 
 
-        TargetPosition = new Vector3(camTop.transform.position.x, 21, camTop.transform.position.z + 5);
+        TargetPosition = new Vector3(camTop.transform.position.x, 21, camTop.transform.position.z - 5);
 
         canvas.SetActive(false);
         

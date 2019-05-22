@@ -96,11 +96,27 @@ public class CameraTwoRotator : MonoBehaviour {
                 }
             }
         }
+
+
+
+        //CHANGING PROJECTION
+        if (_changing)
+        {
+            ChangeProjection = false;
+        }
+        else if (ChangeProjection)
+        {
+            _changing = true;
+            _currentT = 0.0f;
+        }
     }
 
     //Initialize camera movement variables and start movement coroutine
     private void StartMove(Vector3 goalPos, Quaternion goalRot, int goal, float time)
     {
+        //theCam.orthographic = false;
+        
+        ChangeProjection = true;
         currentPos = goal;
 
         if (camTween != null)
@@ -169,10 +185,14 @@ public class CameraTwoRotator : MonoBehaviour {
 
             yield return null;
         }
+        //theCam.orthographic = true;
+        
+        ChangeProjection = true;
 
         playerTwoCam.transform.position = targetPos;
         playerTwoCam.transform.rotation = targetRot;
 
+        yield return new WaitForSeconds(2f);
         moveEnabled = true;
         targetTween = null;
     }
@@ -193,7 +213,6 @@ public class CameraTwoRotator : MonoBehaviour {
         }
         cameraTarget.transform.rotation = targetRot;
 
-        moveEnabled = true;
         camTween = null;
     }
 
@@ -247,5 +266,74 @@ public class CameraTwoRotator : MonoBehaviour {
     public int GetFloor()
     {
         return floor;
+    }
+
+
+
+
+    //CHANGING PROJECTION
+    //https://answers.unity.com/questions/583316/fluent-animation-from-orthographic-to-perspective.html
+    public float ProjectionChangeTime = 1f;
+    public bool ChangeProjection = false;
+
+    private bool _changing = false;
+    private float _currentT = 0.0f;
+
+    private void LateUpdate()
+    {
+        if (!_changing)
+        {
+            return;
+        }
+
+        var currentlyOrthographic = theCam.orthographic;
+        Matrix4x4 orthoMat, persMat;
+        if (currentlyOrthographic)
+        {
+            orthoMat = theCam.projectionMatrix;
+
+            theCam.orthographic = false;
+            theCam.ResetProjectionMatrix();
+            persMat = theCam.projectionMatrix;
+        }
+        else
+        {
+            persMat = theCam.projectionMatrix;
+
+            theCam.orthographic = true;
+            theCam.ResetProjectionMatrix();
+            orthoMat = theCam.projectionMatrix;
+        }
+        theCam.orthographic = currentlyOrthographic;
+
+        _currentT += (Time.deltaTime / ProjectionChangeTime);
+        if (_currentT < 1.0f)
+        {
+            if (currentlyOrthographic)
+            {
+                theCam.projectionMatrix = MatrixLerp(orthoMat, persMat, _currentT * _currentT);
+            }
+            else
+            {
+                theCam.projectionMatrix = MatrixLerp(persMat, orthoMat, Mathf.Sqrt(_currentT));
+            }
+        }
+        else
+        {
+            _changing = false;
+            theCam.orthographic = !currentlyOrthographic;
+            theCam.ResetProjectionMatrix();
+        }
+    }
+
+    private Matrix4x4 MatrixLerp(Matrix4x4 from, Matrix4x4 to, float t)
+    {
+        t = Mathf.Clamp(t, 0.0f, 1.0f);
+        var newMatrix = new Matrix4x4();
+        newMatrix.SetRow(0, Vector4.Lerp(from.GetRow(0), to.GetRow(0), t));
+        newMatrix.SetRow(1, Vector4.Lerp(from.GetRow(1), to.GetRow(1), t));
+        newMatrix.SetRow(2, Vector4.Lerp(from.GetRow(2), to.GetRow(2), t));
+        newMatrix.SetRow(3, Vector4.Lerp(from.GetRow(3), to.GetRow(3), t));
+        return newMatrix;
     }
 }
